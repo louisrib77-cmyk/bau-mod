@@ -5,42 +5,520 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Marineford Bauplan</title>
 <style>
-  :root { --bg:#0f1720; --card:#17222e; --text:#e6edf3; --muted:#8b9bab; --ok:#3fb950; --bad:#f85149; }
-  * { box-sizing: border-box; }
-  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text); font-family:system-ui,sans-serif; }
-  .card { background:var(--card); padding:2rem 2.5rem; border-radius:12px; max-width:420px; width:90%; }
-  h1 { margin:0 0 .25rem; font-size:1.5rem; }
-  p { color:var(--muted); margin:0 0 1.5rem; }
-  .row { display:flex; justify-content:space-between; padding:.5rem 0; border-top:1px solid #243242; }
-  .ok { color:var(--ok); } .bad { color:var(--bad); }
+  :root { --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2a3441; --text:#e6edf3; --muted:#8b98a8; --accent:#58a6ff; --ok:#3fb950; --warn:#d29922; --bad:#f85149; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; margin:0; }
+  body { background:var(--bg); color:var(--text); font:14px system-ui, sans-serif; display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:18px; padding:8px 14px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header strong { font-size:16px; }
+  nav { display:flex; gap:4px; flex-wrap:wrap; }
+  nav button { background:none; border:0; color:var(--muted); padding:7px 12px; border-radius:6px; cursor:pointer; font:inherit; }
+  nav button:hover { color:var(--text); background:var(--panel2); }
+  nav button.on { color:var(--text); background:var(--panel2); box-shadow:inset 0 -2px 0 var(--accent); }
+  #overall { margin-left:auto; display:flex; align-items:center; gap:10px; min-width:240px; }
+  .bar { flex:1; height:8px; background:#243242; border-radius:4px; overflow:hidden; position:relative; }
+  .bar i { display:block; height:100%; background:var(--ok); width:0; }
+  .bar b { position:absolute; left:0; top:0; height:100%; background:#2f4a66; }
+  .bar b + i { position:relative; }
+  main { flex:1; min-height:0; position:relative; }
+  .view { position:absolute; inset:0; display:none; }
+  .view.on { display:flex; }
+  .muted { color:var(--muted); }
+  button.btn { background:#238636; color:#fff; border:0; border-radius:6px; padding:7px 14px; cursor:pointer; font:inherit; }
+  button.btn.alt { background:var(--panel2); border:1px solid var(--line); color:var(--text); }
+  button.btn:disabled { opacity:.5; cursor:default; }
+  input, select { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
+
+  /* Karte */
+  #bm { flex:1; border:0; background:#000; }
+  #sidebar { width:260px; background:var(--panel); border-left:1px solid var(--line); padding:12px; overflow:auto; }
+  #sidebar h3 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .player { display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--line); }
+  .player img { width:28px; height:28px; image-rendering:pixelated; border-radius:4px; }
+  .player.me { color:var(--accent); }
+  .player small { display:block; color:var(--muted); }
+
+  /* Bauplan */
+  #plist { width:340px; background:var(--panel); border-right:1px solid var(--line); overflow:auto; }
+  .stage { padding:10px 12px 6px; font-weight:600; border-top:1px solid var(--line); display:flex; justify-content:space-between; position:sticky; top:0; background:var(--panel); }
+  .stage span { color:var(--muted); font-weight:400; }
+  .prow { padding:7px 12px; cursor:pointer; display:grid; grid-template-columns:1fr 46px; gap:2px 8px; align-items:center; }
+  .prow:hover { background:var(--panel2); }
+  .prow.sel { background:#1f3350; }
+  .prow .bar { grid-column:1 / 3; height:5px; }
+  .prow em { font-style:normal; color:var(--muted); text-align:right; font-size:12px; }
+  #lview { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #lbar { padding:10px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line); background:var(--panel); }
+  #lbar input[type=range] { flex:1; min-width:120px; }
+  #lwrap { flex:1; overflow:auto; padding:14px; }
+  #linfo { padding:8px 14px; border-top:1px solid var(--line); background:var(--panel); color:var(--muted); min-height:36px; }
+  canvas#lc { background:#0a0e14; border:1px solid var(--line); image-rendering:pixelated; }
+
+  /* 3D */
+  #c3d { flex:1; position:relative; overflow:hidden; }
+  #c3d canvas { display:block; width:100%; height:100%; }
+  #h3d { position:absolute; left:12px; top:12px; background:rgba(13,17,23,.85); border:1px solid var(--line); border-radius:8px; padding:10px 12px; max-width:300px; }
+  #h3d p { margin:6px 0 0; }
+
+  /* Tabellen & Listen */
+  .page { flex:1; overflow:auto; padding:18px 24px; max-width:900px; }
+  table { border-collapse:collapse; width:100%; }
+  th, td { padding:7px 10px; border-bottom:1px solid var(--line); text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:500; }
+  .sw { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:8px; vertical-align:-1px; }
+  .row { display:flex; gap:8px; margin:10px 0; flex-wrap:wrap; align-items:center; }
+  .todo { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); }
+  .todo.done span.t { text-decoration:line-through; color:var(--muted); }
+  .todo .tag { font-size:12px; color:var(--muted); }
+  .todo .x { margin-left:auto; background:none; border:0; color:var(--muted); cursor:pointer; font-size:16px; }
+  .grid2 { display:grid; grid-template-columns:90px 1fr; gap:8px 12px; align-items:center; max-width:420px; }
+  h2 { margin:0 0 12px; font-size:18px; }
+  .note { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:12px 0; color:var(--muted); }
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>Marineford Bauplan</h1>
-  <p>Phase 1: Grundgerüst läuft.</p>
-  <div class="row"><span>Plugin</span><span id="version">…</span></div>
-  <div class="row"><span>Spieler online</span><span id="players">…</span></div>
-  <div class="row"><span>BlueMap</span><span id="bluemap">…</span></div>
-</div>
+<header>
+  <strong>Marineford Bauplan</strong>
+  <nav id="tabs">
+    <button data-tab="map" class="on">Karte</button>
+    <button data-tab="plan">Bauplan</button>
+    <button data-tab="d3">3D</button>
+    <button data-tab="mat">Material</button>
+    <button data-tab="todo">To-dos</button>
+    <button data-tab="set">Einstellungen</button>
+  </nav>
+  <div id="overall"><div class="bar"><b id="obar2"></b><i id="obar"></i></div><span id="otxt" class="muted">…</span></div>
+</header>
+<main>
+  <section class="view on" id="v-map">
+    <iframe id="bm" title="BlueMap"></iframe>
+    <aside id="sidebar"><h3>Live-Spieler</h3><div id="plist-live"></div></aside>
+  </section>
+
+  <section class="view" id="v-plan">
+    <div id="plist"></div>
+    <div id="lview">
+      <div id="lbar">
+        <strong id="ltitle">Bauteil wählen</strong>
+        <button class="btn alt" id="lprev">◀</button>
+        <input type="range" id="lrange" min="0" max="0" value="0">
+        <button class="btn alt" id="lnext">▶</button>
+        <span id="llabel" class="muted"></span>
+        <button class="btn alt" id="lopen">Nächster offener Layer</button>
+      </div>
+      <div id="lwrap"><canvas id="lc" width="10" height="10"></canvas></div>
+      <div id="linfo">Klicke links auf ein Bauteil. Pfeiltasten ← → wechseln den Layer.</div>
+    </div>
+  </section>
+
+  <section class="view" id="v-d3">
+    <div id="c3d">
+      <div id="h3d">
+        <div class="row" style="margin:0">
+          <button class="btn alt" id="mode3d">Modus: Orbit</button>
+          <button class="btn alt" id="fit3d">Zentrieren</button>
+        </div>
+        <p class="muted" id="hint3d">Orbit: Maus ziehen = drehen, Mausrad = Zoom.</p>
+        <p id="sel3d"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-mat">
+    <div class="page">
+      <h2>Materialliste</h2>
+      <div class="row"><span class="muted">Etappe:</span><select id="matstage"></select></div>
+      <table><thead><tr><th>Material</th><th>Geplant</th><th>Fertig</th><th>Fehlt</th><th>Stacks (fehlt)</th></tr></thead><tbody id="mattbody"></tbody></table>
+      <div class="note">„Fertig“ zählt nur Blöcke, die der letzte Scan gefunden hat. Ohne gesetzten Anker oder Scan steht dort 0.</div>
+    </div>
+  </section>
+
+  <section class="view" id="v-todo">
+    <div class="page">
+      <h2>Team-To-dos</h2>
+      <div class="row">
+        <input id="todotext" placeholder="Aufgabe, z. B. Ringmauer Nordseite fertigstellen" style="flex:1;min-width:220px">
+        <input id="todowho" placeholder="Wer?" style="width:120px">
+        <select id="todostage"></select>
+        <button class="btn" id="todoadd">Hinzufügen</button>
+      </div>
+      <div id="todolist"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-set">
+    <div class="page">
+      <h2>Position &amp; Scan</h2>
+      <p class="muted">Der Anker ist der Mittelpunkt der Plaza auf Bodenhöhe. Alle Koordinaten des Plans beziehen sich darauf.</p>
+      <div class="grid2">
+        <label>Welt</label><input id="aworld" placeholder="world">
+        <label>X</label><input id="ax" type="number">
+        <label>Y</label><input id="ay" type="number">
+        <label>Z</label><input id="az" type="number">
+      </div>
+      <div class="row">
+        <input id="meName" placeholder="Dein Minecraft-Name" style="width:200px">
+        <button class="btn alt" id="usepos">Meine Position übernehmen</button>
+        <button class="btn" id="saveanchor">Anker speichern</button>
+      </div>
+      <div class="row"><button class="btn alt" id="scannow">Jetzt scannen</button><span id="scanstate" class="muted"></span></div>
+      <div class="note">Der Scan lädt bereits generierte Chunks im Plangebiet einzeln und zählt passende Blöcke. Es werden keine neuen Chunks erzeugt.</div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-  const token = new URLSearchParams(location.search).get('token');
-  const url = '/api/status' + (token ? '?token=' + encodeURIComponent(token) : '');
-  async function refresh() {
-    try {
-      const r = await fetch(url);
-      const s = await r.json();
-      document.getElementById('version').textContent = s.version;
-      document.getElementById('players').textContent = s.players;
-      const bm = document.getElementById('bluemap');
-      bm.textContent = s.bluemap ? 'verbunden' : 'nicht bereit';
-      bm.className = s.bluemap ? 'ok' : 'bad';
-    } catch (e) {
-      document.getElementById('version').textContent = 'Fehler';
+const $ = s => document.querySelector(s);
+const h = (t, a = {}, ...c) => {
+  const e = document.createElement(t);
+  for (const k in a) {
+    if (k === 'class') e.className = a[k];
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), a[k]);
+    else e.setAttribute(k, a[k]);
+  }
+  for (const x of c.flat()) e.append(x);
+  return e;
+};
+const token = new URLSearchParams(location.search).get('token');
+async function api(path, method = 'GET', body) {
+  const o = { method, headers: {} };
+  if (token) o.headers['X-Token'] = token;
+  if (body !== undefined) { o.body = JSON.stringify(body); o.headers['Content-Type'] = 'application/json'; }
+  const r = await fetch(path, o);
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+const S = { cfg: null, plan: null, players: [], status: null, sel: null, ly: 0, layerData: null, tab: 'map' };
+const COLORS = {
+  STONE: '#7d7d7d', STONE_BRICKS: '#7a7a7a', SMOOTH_STONE: '#9a9a9a', WATER: '#3b6fd8', SPRUCE_PLANKS: '#6b4f2d',
+  OAK_PLANKS: '#b8945f', BRICKS: '#97604f', WHITE_CONCRETE: '#e8ebec', LIGHT_BLUE_CONCRETE: '#4aa5d8', BLUE_CONCRETE: '#2c4a9a'
+};
+function colorOf(m) {
+  if (COLORS[m]) return COLORS[m];
+  let n = 0; for (const c of m) n = (n * 31 + c.charCodeAt(0)) % 360;
+  return `hsl(${n},45%,55%)`;
+}
+const pct = (d, t) => t ? Math.round(d * 100 / t) : 0;
+const stageName = i => (S.plan && S.plan.stages[i - 1]) || ('Etappe ' + i);
+const isFull = p => p.total > 0 && p.done >= p.total;
+
+// ---------------------------------------------------------------- Tabs
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  showTab(b.dataset.tab);
+});
+function showTab(t) {
+  S.tab = t;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + t));
+  if (t === 'map' && S.cfg && !$('#bm').src) $('#bm').src = `http://${location.hostname}:${S.cfg.bluemapPort}/`;
+  if (t === 'd3') { ensure3d(); resize3d(); }
+  if (t === 'mat') renderMaterials();
+  if (t === 'todo') loadTodos();
+}
+
+// ---------------------------------------------------------------- Laden
+async function loadConfig() { S.cfg = await api('/api/config'); fillSettings(); fillStageSelects(); }
+async function loadPlan() { S.plan = await api('/api/plan'); renderOverall(); renderPlanList(); if (S.tab === 'mat') renderMaterials(); if (T) { build3d(); } }
+async function loadStatus() { S.status = await api('/api/status'); renderScan(); }
+async function loadPlayers() {
+  S.players = await api('/api/players');
+  renderPlayers();
+  if (T) update3dPlayers();
+}
+
+function renderOverall() {
+  const ps = S.plan.parts;
+  const total = ps.reduce((a, p) => a + p.total, 0), done = ps.reduce((a, p) => a + p.done, 0), chk = ps.reduce((a, p) => a + p.checked, 0);
+  $('#obar').style.width = pct(done, total) + '%';
+  $('#obar2').style.width = pct(chk, total) + '%';
+  $('#otxt').textContent = `${pct(done, total)}% fertig · ${done.toLocaleString('de')} / ${total.toLocaleString('de')} Blöcke`;
+}
+
+// ---------------------------------------------------------------- Karte / Spieler
+function meName() { return ($('#meName').value || localStorage.getItem('mf_me') || '').trim().toLowerCase(); }
+function renderPlayers() {
+  const box = $('#plist-live'); box.replaceChildren();
+  if (!S.players.length) box.append(h('p', { class: 'muted' }, 'Niemand online.'));
+  for (const p of S.players) {
+    box.append(h('div', { class: 'player' + (p.name.toLowerCase() === meName() ? ' me' : '') },
+      h('img', { src: 'https://mc-heads.net/avatar/' + encodeURIComponent(p.name) + '/56', alt: '' }),
+      h('div', {}, p.name, h('small', {}, `${Math.round(p.x)} ${Math.round(p.y)} ${Math.round(p.z)} · ${p.world}`))));
+  }
+}
+
+// ---------------------------------------------------------------- Bauplan-Liste
+function renderPlanList() {
+  const box = $('#plist'); box.replaceChildren();
+  const stages = [...new Set(S.plan.parts.map(p => p.stage))].sort((a, b) => a - b);
+  for (const st of stages) {
+    const ps = S.plan.parts.filter(p => p.stage === st);
+    const t = ps.reduce((a, p) => a + p.total, 0), d = ps.reduce((a, p) => a + p.done, 0);
+    box.append(h('div', { class: 'stage' }, `${st}. ${stageName(st)}`, h('span', {}, pct(d, t) + '%')));
+    for (const p of ps) {
+      const bar = h('div', { class: 'bar' }, h('i', { style: `width:${pct(p.done, p.total)}%` }));
+      box.append(h('div', { class: 'prow' + (S.sel === p.id ? ' sel' : ''), onclick: () => selectPart(p.id) },
+        h('span', {}, p.name), h('em', {}, pct(p.done, p.total) + '%'), bar));
     }
   }
-  refresh();
-  setInterval(refresh, 3000);
+}
+function part(id) { return S.plan.parts.find(p => p.id === id); }
+function selectPart(id, layer) {
+  S.sel = id;
+  const p = part(id);
+  S.ly = layer !== undefined ? layer : (p.checked > 0 && p.nextLayer >= 0 ? p.nextLayer : 0);
+  renderPlanList();
+  $('#lrange').max = p.sy - 1;
+  loadLayer();
+  if (S.tab !== 'plan') showTab('plan');
+}
+async function loadLayer() {
+  const p = part(S.sel); if (!p) return;
+  S.ly = Math.max(0, Math.min(p.sy - 1, S.ly));
+  $('#lrange').value = S.ly;
+  const d = await api(`/api/layer?part=${encodeURIComponent(p.id)}&y=${S.ly}`);
+  S.layerData = d;
+  drawLayer(d, p);
+}
+function drawLayer(d, p) {
+  const wrap = $('#lwrap');
+  const cell = Math.max(1, Math.floor(Math.min((wrap.clientWidth - 30) / d.width, (wrap.clientHeight - 30) / d.depth)));
+  const c = $('#lc'); c.width = d.width * cell; c.height = d.depth * cell;
+  const g = c.getContext('2d');
+  g.fillStyle = '#0a0e14'; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = colorOf(d.material);
+  d.rows.forEach((row, z) => {
+    for (let x = 0; x < row.length; x++) if (row[x] === '#') g.fillRect(x * cell, z * cell, cell, cell);
+  });
+  if (cell >= 3) {
+    g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 1;
+    if (cell >= 6) {
+      for (let x = 0; x <= d.width; x++) { g.beginPath(); g.moveTo(x * cell + .5, 0); g.lineTo(x * cell + .5, c.height); g.stroke(); }
+      for (let z = 0; z <= d.depth; z++) { g.beginPath(); g.moveTo(0, z * cell + .5); g.lineTo(c.width, z * cell + .5); g.stroke(); }
+    }
+    g.strokeStyle = 'rgba(88,166,255,.35)';
+    for (let x = 0; x < d.width; x++) if ((d.minX + x) % 16 === 0) { g.beginPath(); g.moveTo(x * cell + .5, 0); g.lineTo(x * cell + .5, c.height); g.stroke(); }
+    for (let z = 0; z < d.depth; z++) if ((d.minZ + z) % 16 === 0) { g.beginPath(); g.moveTo(0, z * cell + .5); g.lineTo(c.width, z * cell + .5); g.stroke(); }
+  }
+  S.cell = cell;
+  $('#ltitle').textContent = `${p.name} · ${p.material}`;
+  $('#llabel').textContent = `Layer ${d.y + 1} / ${p.sy}` + (d.anchorSet ? ` · Y = ${d.absY}` : '');
+  const geprueft = p.checked > 0;
+  const base = d.anchorSet
+    ? `Start (Nordwest-Ecke): X ${d.minX}, Z ${d.minZ}, Y ${d.absY} · `
+    : 'Anker nicht gesetzt (Einstellungen) – Koordinaten sind relativ. · ';
+  $('#linfo').textContent = `${base}${d.count.toLocaleString('de')} Blöcke in diesem Layer` +
+    (geprueft ? ` · davon ${d.done.toLocaleString('de')} gebaut` : '') + ' · blaue Linien = Chunk-Grenzen';
+}
+$('#lc').addEventListener('mousemove', e => {
+  const d = S.layerData; if (!d || !S.cell) return;
+  const r = e.target.getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / S.cell), z = Math.floor((e.clientY - r.top) / S.cell);
+  if (x >= 0 && z >= 0 && x < d.width && z < d.depth)
+    $('#llabel').textContent = `Layer ${d.y + 1} / ${part(S.sel).sy} · X ${d.minX + x}, Z ${d.minZ + z}` + (d.anchorSet ? ` · Y ${d.absY}` : '');
+});
+$('#lprev').onclick = () => { S.ly--; loadLayer(); };
+$('#lnext').onclick = () => { S.ly++; loadLayer(); };
+$('#lrange').oninput = e => { S.ly = +e.target.value; loadLayer(); };
+$('#lopen').onclick = () => { const p = part(S.sel); if (p && p.nextLayer >= 0) { S.ly = p.nextLayer; loadLayer(); } };
+document.addEventListener('keydown', e => {
+  if (S.tab !== 'plan' || !S.sel || /INPUT|SELECT/.test(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowLeft') { S.ly--; loadLayer(); } else if (e.key === 'ArrowRight') { S.ly++; loadLayer(); }
+});
+
+// ---------------------------------------------------------------- Material
+function fillStageSelects() {
+  const stages = S.cfg.stages;
+  const m = $('#matstage'); m.replaceChildren(h('option', { value: '0' }, 'Alle Etappen'));
+  const t = $('#todostage'); t.replaceChildren(h('option', { value: '0' }, 'Allgemein'));
+  stages.forEach((n, i) => { m.append(h('option', { value: i + 1 }, `${i + 1}. ${n}`)); t.append(h('option', { value: i + 1 }, `${i + 1}. ${n}`)); });
+}
+$('#matstage').onchange = renderMaterials;
+function renderMaterials() {
+  if (!S.plan) return;
+  const st = +$('#matstage').value;
+  const agg = {};
+  for (const p of S.plan.parts) {
+    if (st && p.stage !== st) continue;
+    const a = agg[p.material] || (agg[p.material] = { total: 0, done: 0 });
+    a.total += p.total; a.done += p.done;
+  }
+  const body = $('#mattbody'); body.replaceChildren();
+  Object.entries(agg).sort((a, b) => b[1].total - a[1].total).forEach(([m, a]) => {
+    const miss = Math.max(0, a.total - a.done);
+    body.append(h('tr', {},
+      h('td', {}, h('span', { class: 'sw', style: 'background:' + colorOf(m) }), m),
+      h('td', {}, a.total.toLocaleString('de')), h('td', {}, a.done.toLocaleString('de')),
+      h('td', {}, miss.toLocaleString('de')), h('td', {}, Math.ceil(miss / 64).toLocaleString('de'))));
+  });
+}
+
+// ---------------------------------------------------------------- To-dos
+async function loadTodos() {
+  const list = await api('/api/todos');
+  const box = $('#todolist'); box.replaceChildren();
+  if (!list.length) box.append(h('p', { class: 'muted' }, 'Noch keine Aufgaben.'));
+  list.sort((a, b) => a.done - b.done || a.stage - b.stage || a.id - b.id).forEach(t => {
+    const cb = h('input', { type: 'checkbox' }); cb.checked = t.done;
+    cb.onchange = async () => { await api('/api/todos/toggle?id=' + t.id, 'POST'); loadTodos(); };
+    const tag = [t.stage ? stageName(t.stage) : 'Allgemein', t.assignee].filter(Boolean).join(' · ');
+    box.append(h('div', { class: 'todo' + (t.done ? ' done' : '') }, cb, h('span', { class: 't' }, t.text), h('span', { class: 'tag' }, tag),
+      h('button', { class: 'x', title: 'Löschen', onclick: async () => { await api('/api/todos/delete?id=' + t.id, 'POST'); loadTodos(); } }, '×')));
+  });
+}
+$('#todoadd').onclick = async () => {
+  const text = $('#todotext').value.trim(); if (!text) return;
+  await api('/api/todos', 'POST', { text, assignee: $('#todowho').value, stage: +$('#todostage').value });
+  $('#todotext').value = ''; loadTodos();
+};
+$('#todotext').addEventListener('keydown', e => { if (e.key === 'Enter') $('#todoadd').click(); });
+
+// ---------------------------------------------------------------- Einstellungen
+function fillSettings() {
+  $('#meName').value = localStorage.getItem('mf_me') || '';
+  const a = S.cfg.anchor;
+  if (a) { $('#aworld').value = a.world; $('#ax').value = a.x; $('#ay').value = a.y; $('#az').value = a.z; }
+}
+$('#meName').onchange = () => { localStorage.setItem('mf_me', $('#meName').value.trim()); renderPlayers(); };
+$('#usepos').onclick = () => {
+  let p = S.players.find(x => x.name.toLowerCase() === meName());
+  if (!p && S.players.length === 1) p = S.players[0];
+  if (!p) { alert('Spieler nicht gefunden. Trage deinen Minecraft-Namen ein und stelle sicher, dass du online bist.'); return; }
+  $('#aworld').value = p.world; $('#ax').value = Math.floor(p.x); $('#ay').value = Math.floor(p.y); $('#az').value = Math.floor(p.z);
+};
+$('#saveanchor').onclick = async () => {
+  const body = { world: $('#aworld').value, x: +$('#ax').value, y: +$('#ay').value, z: +$('#az').value };
+  try { await api('/api/anchor', 'POST', body); await loadConfig(); await loadPlan(); await loadStatus(); } catch (e) { alert('Speichern fehlgeschlagen. Sind alle Felder ausgefüllt?'); }
+};
+$('#scannow').onclick = async () => { try { await api('/api/scan', 'POST'); await loadStatus(); } catch (e) { alert('Scan nicht möglich: erst den Anker setzen.'); } };
+function renderScan() {
+  const s = S.status; if (!s) return;
+  let t = s.scanning ? `Scan läuft: ${s.scanChunksDone} / ${s.scanChunksTotal} Chunks` : (s.lastScan ? 'Letzter Scan: ' + new Date(s.lastScan).toLocaleTimeString('de') : 'Noch kein Scan gelaufen');
+  if (!s.anchorSet) t = 'Kein Anker gesetzt';
+  $('#scanstate').textContent = t;
+}
+
+// ---------------------------------------------------------------- 3D
+let T = null;
+function ensure3d() {
+  if (T || typeof THREE === 'undefined') { if (typeof THREE === 'undefined') $('#sel3d').textContent = '3D-Bibliothek konnte nicht geladen werden (Internet nötig).'; return; }
+  const el = $('#c3d');
+  const r = new THREE.WebGLRenderer({ antialias: true });
+  el.prepend(r.domElement);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x87b6e8);
+  const cam = new THREE.PerspectiveCamera(60, 1, 0.5, 6000);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(300, 500, 200); scene.add(sun);
+  T = { r, scene, cam, group: new THREE.Group(), pgroup: new THREE.Group(), yaw: 0.4, pitch: -0.55, dist: 650,
+        target: new THREE.Vector3(0, 20, 0), pos: new THREE.Vector3(0, 200, 500), mode: 'orbit', keys: {}, last: performance.now(), ray: new THREE.Raycaster() };
+  scene.add(T.group, T.pgroup);
+  const dom = r.domElement; let drag = null, moved = 0;
+  dom.addEventListener('mousedown', e => { drag = { x: e.clientX, y: e.clientY }; moved = 0; });
+  window.addEventListener('mouseup', e => {
+    if (drag && moved < 4 && e.target === dom) pick3d(e);
+    drag = null;
+  });
+  window.addEventListener('mousemove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY }; moved += Math.abs(dx) + Math.abs(dy);
+    T.yaw -= dx * 0.005; T.pitch = Math.max(-1.5, Math.min(1.5, T.pitch - dy * 0.005));
+  });
+  dom.addEventListener('wheel', e => { e.preventDefault(); if (T.mode === 'orbit') T.dist = Math.max(20, Math.min(3000, T.dist * (1 + Math.sign(e.deltaY) * 0.1))); else fwd3d(-Math.sign(e.deltaY) * 25); }, { passive: false });
+  window.addEventListener('keydown', e => { if (S.tab === 'd3' && !/INPUT|SELECT/.test(document.activeElement.tagName)) T.keys[e.key.toLowerCase()] = true; });
+  window.addEventListener('keyup', e => { T.keys[e.key.toLowerCase()] = false; });
+  window.addEventListener('resize', resize3d);
+  $('#mode3d').onclick = toggleMode3d;
+  $('#fit3d').onclick = () => { T.target.set(0, 20, 0); T.dist = 650; T.yaw = 0.4; T.pitch = -0.55; };
+  if (S.plan) build3d();
+  update3dPlayers();
+  requestAnimationFrame(loop3d);
+}
+function dir3d() { return new THREE.Vector3(-Math.sin(T.yaw) * Math.cos(T.pitch), Math.sin(T.pitch), -Math.cos(T.yaw) * Math.cos(T.pitch)); }
+function fwd3d(d) { T.pos.addScaledVector(dir3d(), d); }
+function toggleMode3d() {
+  if (T.mode === 'orbit') {
+    T.mode = 'fly'; T.pos.copy(T.target).addScaledVector(dir3d(), -T.dist);
+    $('#mode3d').textContent = 'Modus: Flug';
+    $('#hint3d').textContent = 'Flug: Maus ziehen = umsehen, W/A/S/D = bewegen, E/Q = hoch/runter, Shift = schneller.';
+  } else {
+    T.mode = 'orbit'; $('#mode3d').textContent = 'Modus: Orbit';
+    $('#hint3d').textContent = 'Orbit: Maus ziehen = drehen, Mausrad = Zoom.';
+  }
+}
+function resize3d() {
+  if (!T) return;
+  const el = $('#c3d'); const w = el.clientWidth, hh = el.clientHeight; if (!w || !hh) return;
+  T.r.setSize(w, hh, false); T.cam.aspect = w / hh; T.cam.updateProjectionMatrix();
+}
+function loop3d(now) {
+  requestAnimationFrame(loop3d);
+  if (S.tab !== 'd3') { T.last = now; return; }
+  const dt = Math.min(0.1, (now - T.last) / 1000); T.last = now;
+  const d = dir3d();
+  if (T.mode === 'fly') {
+    const sp = (T.keys['shift'] ? 400 : 120) * dt, right = new THREE.Vector3(Math.cos(T.yaw), 0, -Math.sin(T.yaw));
+    if (T.keys['w']) T.pos.addScaledVector(d, sp); if (T.keys['s']) T.pos.addScaledVector(d, -sp);
+    if (T.keys['d']) T.pos.addScaledVector(right, sp); if (T.keys['a']) T.pos.addScaledVector(right, -sp);
+    if (T.keys['e']) T.pos.y += sp; if (T.keys['q']) T.pos.y -= sp;
+  } else {
+    T.pos.copy(T.target).addScaledVector(d, -T.dist);
+  }
+  T.cam.position.copy(T.pos); T.cam.lookAt(T.pos.clone().add(d));
+  T.r.render(T.scene, T.cam);
+}
+function build3d() {
+  if (!T || !S.plan) return;
+  T.group.clear();
+  for (const p of S.plan.parts) {
+    let geo;
+    if (p.shape === 'cylinder') geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 40);
+    else if (p.shape === 'dome') geo = new THREE.SphereGeometry(0.5, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2);
+    else geo = new THREE.BoxGeometry(1, 1, 1);
+    const water = p.material === 'WATER';
+    const mat = new THREE.MeshLambertMaterial({ color: colorOf(p.material), transparent: water || p.hollow, opacity: water ? 0.65 : (p.hollow ? 0.85 : 1), side: p.hollow ? THREE.DoubleSide : THREE.FrontSide });
+    if (isFull(p)) mat.emissive.setHex(0x0a3a12);
+    const m = new THREE.Mesh(geo, mat);
+    if (p.shape === 'dome') { m.scale.set(p.sx, p.sy * 2, p.sz); m.position.set(p.x + p.sx / 2, p.y, p.z + p.sz / 2); }
+    else { m.scale.set(p.sx, p.sy, p.sz); m.position.set(p.x + p.sx / 2, p.y + p.sy / 2, p.z + p.sz / 2); }
+    m.userData.id = p.id;
+    T.group.add(m);
+  }
+}
+function pick3d(e) {
+  const rect = T.r.domElement.getBoundingClientRect();
+  const v = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  T.ray.setFromCamera(v, T.cam);
+  const hit = T.ray.intersectObjects(T.group.children)[0];
+  const box = $('#sel3d'); box.replaceChildren();
+  if (!hit) return;
+  const p = part(hit.object.userData.id);
+  box.append(h('strong', {}, p.name), h('div', { class: 'muted' }, `${stageName(p.stage)} · ${p.material} · ${p.sx}×${p.sy}×${p.sz} · ${pct(p.done, p.total)}% fertig`),
+    h('button', { class: 'btn', style: 'margin-top:8px', onclick: () => selectPart(p.id) }, 'Layer-Anleitung öffnen'));
+}
+function update3dPlayers() {
+  if (!T) return;
+  T.pgroup.clear();
+  const a = S.cfg && S.cfg.anchor; if (!a) return;
+  for (const p of S.players) {
+    if (p.world !== a.world) continue;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), new THREE.MeshBasicMaterial({ color: p.name.toLowerCase() === meName() ? 0x58a6ff : 0xf85149 }));
+    m.position.set(p.x - a.x, p.y - a.y + 2, p.z - a.z); T.pgroup.add(m);
+  }
+}
+
+// ---------------------------------------------------------------- Start
+async function tick() { try { await loadPlan(); await loadStatus(); } catch (e) { /* offline */ } }
+(async function init() {
+  try {
+    await loadConfig(); await loadPlan(); await loadStatus(); await loadPlayers();
+    $('#bm').src = `http://${location.hostname}:${S.cfg.bluemapPort}/`;
+  } catch (e) { document.body.prepend(h('div', { class: 'note' }, 'Verbindung zum Plugin fehlgeschlagen. Prüfe Token und Port.')); }
+  setInterval(() => loadPlayers().catch(() => {}), 2000);
+  setInterval(tick, 8000);
+})();
 </script>
 </body>
 </html>

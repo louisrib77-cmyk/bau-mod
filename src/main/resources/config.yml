@@ -4,6 +4,11 @@ web:
   # 0.0.0.0 = erreichbar ueber localhost UND die Tailscale-IP.
   # 127.0.0.1 = nur lokal auf dem Server-Laptop.
   bind: "0.0.0.0"
+  # Port, auf dem BlueMap laeuft (wird in der Karten-Ansicht eingebettet).
+  bluemap-port: 8100
   # Optional: Zugriffstoken. Leer = kein Schutz.
   # Aufruf dann mit http://IP:8200/?token=DEIN_TOKEN
   token: ""
+
+# Automatischer Fortschritts-Scan (Welt gegen Plan vergleichen), in Minuten. 0 = aus.
+scan-interval-minutes: 10

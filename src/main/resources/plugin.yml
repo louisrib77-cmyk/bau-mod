@@ -3,4 +3,14 @@ version: ${project.version}
 main: de.louis.marineford.MarinefordPlugin
 api-version: '26.2'
 depend: [BlueMap]
-description: Live-Karte und Bauanleitung fuer Marineford (BlueMap + eigener Webserver)
+description: Live-Karte, Bauplan und Fortschritt fuer Marineford (BlueMap + eigener Webserver)
+commands:
+  marineford:
+    description: Marineford-Bauplan verwalten
+    usage: /marineford <anchor|scan|reload|info>
+    aliases: [mf]
+    permission: marineford.admin
+permissions:
+  marineford.admin:
+    description: Marineford-Bauplan verwalten
+    default: op
