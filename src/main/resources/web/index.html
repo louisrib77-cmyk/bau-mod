@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marineford Bauplan</title>
+<style>
+  :root { --bg:#0f1720; --card:#17222e; --text:#e6edf3; --muted:#8b9bab; --ok:#3fb950; --bad:#f85149; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text); font-family:system-ui,sans-serif; }
+  .card { background:var(--card); padding:2rem 2.5rem; border-radius:12px; max-width:420px; width:90%; }
+  h1 { margin:0 0 .25rem; font-size:1.5rem; }
+  p { color:var(--muted); margin:0 0 1.5rem; }
+  .row { display:flex; justify-content:space-between; padding:.5rem 0; border-top:1px solid #243242; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Marineford Bauplan</h1>
+  <p>Phase 1: Grundgerüst läuft.</p>
+  <div class="row"><span>Plugin</span><span id="version">…</span></div>
+  <div class="row"><span>Spieler online</span><span id="players">…</span></div>
+  <div class="row"><span>BlueMap</span><span id="bluemap">…</span></div>
+</div>
+<script>
+  const token = new URLSearchParams(location.search).get('token');
+  const url = '/api/status' + (token ? '?token=' + encodeURIComponent(token) : '');
+  async function refresh() {
+    try {
+      const r = await fetch(url);
+      const s = await r.json();
+      document.getElementById('version').textContent = s.version;
+      document.getElementById('players').textContent = s.players;
+      const bm = document.getElementById('bluemap');
+      bm.textContent = s.bluemap ? 'verbunden' : 'nicht bereit';
+      bm.className = s.bluemap ? 'ok' : 'bad';
+    } catch (e) {
+      document.getElementById('version').textContent = 'Fehler';
+    }
+  }
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+name: MarinefordBuilder
+version: ${project.version}
+main: de.louis.marineford.MarinefordPlugin
+api-version: '26.2'
+depend: [BlueMap]
+description: Live-Karte und Bauanleitung fuer Marineford (BlueMap + eigener Webserver)
